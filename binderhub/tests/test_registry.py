@@ -147,7 +147,7 @@ class MockManifestHandler(RequestHandler):
             raise HTTPError(401, "No bearer auth")
         token = auth_header[7:]
         if token != self.test_handle["token"]:
-            raise HTTPError(403, "{} != {}".format(token, self.test_handle["token"]))
+            raise HTTPError(403, f'{token} != {self.test_handle["token"]}')
         self.set_header("Content-Type", "application/json")
         # get_image_manifest never looks at the contents here
         self.write(json.dumps({"image": image, "tag": tag}))
@@ -229,10 +229,7 @@ async def test_get_image_manifest(tmpdir, token_url_known):
             },
             f,
         )
-    if token_url_known:
-        token_url = url + "/token"
-    else:
-        token_url = ""
+    token_url = f"{url}/token" if token_url_known else ""
     registry = DockerRegistry(
         docker_config_path=str(config_json), token_url=token_url, url=url
     )

@@ -26,7 +26,7 @@ def test_rate_limit():
             "reset": reset,
         }
 
-    for i in range(5):
+    for _ in range(5):
         with pytest.raises(RateLimitExceeded):
             r.increment("1.2.3.4")
 
@@ -38,7 +38,7 @@ def test_rate_limit_expires():
     assert r._limits == {}
     now = r.time()
 
-    for i in range(5):
+    for _ in range(5):
         limit = r.increment("1.2.3.4")
 
     # now expire period, should get fresh limit

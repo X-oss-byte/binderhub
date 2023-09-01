@@ -49,8 +49,7 @@ for section, sub_cfg in get_value("config", {}).items():
 
 imageBuilderType = get_value("imageBuilderType")
 if imageBuilderType in ["dind", "pink"]:
-    hostSocketDir = get_value(f"{imageBuilderType}.hostSocketDir")
-    if hostSocketDir:
+    if hostSocketDir := get_value(f"{imageBuilderType}.hostSocketDir"):
         socketname = "docker" if imageBuilderType == "dind" else "podman"
         c.BinderHub.build_docker_host = f"unix://{hostSocketDir}/{socketname}.sock"
 

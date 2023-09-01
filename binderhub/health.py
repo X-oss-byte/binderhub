@@ -28,19 +28,15 @@ def retry(_f=None, *, delay=1, attempts=3):
                 except Exception as e:
                     if attempts == 1:
                         raise
-                    else:
-                        attempts -= 1
-                        app_log.exception(
-                            f"Error checking {f.__name__}: {e}. Retrying ({attempts} attempts remaining)"
-                        )
-                        await asyncio.sleep(delay)
+                    attempts -= 1
+                    app_log.exception(
+                        f"Error checking {f.__name__}: {e}. Retrying ({attempts} attempts remaining)"
+                    )
+                    await asyncio.sleep(delay)
 
         return wrapper
 
-    if _f is None:
-        return repeater
-    else:
-        return repeater(_f)
+    return repeater if _f is None else repeater(_f)
 
 
 def false_if_raises(f):
@@ -94,10 +90,7 @@ def at_most_every(_f=None, *, interval=60):
 
         return wrapper
 
-    if _f is None:
-        return caller
-    else:
-        return caller(_f)
+    return caller if _f is None else caller(_f)
 
 
 def _log_duration(f):
@@ -110,10 +103,7 @@ def _log_duration(f):
             return await f(*args, **kwargs)
         finally:
             t = time.perf_counter() - tic
-            if t > 0.5:
-                log = app_log.info
-            else:
-                log = app_log.debug
+            log = app_log.info if t > 0.5 else app_log.debug
             log(f"Health check {f.__name__} took {t:.3f}s")
 
     return wrapped
@@ -140,7 +130,7 @@ class HealthHandler(BaseHandler):
     @_log_duration
     async def check_jupyterhub_api(self, hub_url):
         """Check JupyterHub API health"""
-        await AsyncHTTPClient().fetch(hub_url + "hub/api/health", request_timeout=3)
+        await AsyncHTTPClient().fetch(f"{hub_url}hub/api/health", request_timeout=3)
         return True
 
     @at_most_every(interval=15)
@@ -253,7 +243,7 @@ class KubernetesHealthHandler(HealthHandler):
 
         quota = self.settings["launch_quota"].total_quota
         total_pods = n_user_pods + n_build_pods
-        usage = {
+        return {
             "total_pods": total_pods,
             "build_pods": n_build_pods,
             "user_pods": n_user_pods,
@@ -263,4 +253,3 @@ class KubernetesHealthHandler(HealthHandler):
             # Being above quota doesn't mean the service is unhealthy
             "_ignore_failure": True,
         }
-        return usage

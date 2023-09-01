@@ -99,7 +99,7 @@ class Launcher(LoggingConfigurable):
         headers = kwargs.setdefault("headers", {})
         headers.update({"Authorization": f"token {self.hub_api_token}"})
         hub_api_url = (
-            os.getenv("JUPYTERHUB_API_URL", "") or self.hub_url_local + "hub/api/"
+            os.getenv("JUPYTERHUB_API_URL", "") or f"{self.hub_url_local}hub/api/"
         )
         if not hub_api_url.endswith("/"):
             hub_api_url += "/"
@@ -200,10 +200,7 @@ class Launcher(LoggingConfigurable):
                     f"users/{escaped_username}", body=b"", method="POST"
                 )
             except HTTPError as e:
-                if e.response:
-                    body = e.response.body
-                else:
-                    body = ""
+                body = e.response.body if e.response else ""
                 app_log.error(
                     "Error creating user %s: %s\n%s",
                     username,
@@ -329,11 +326,7 @@ class Launcher(LoggingConfigurable):
 
         except HTTPError as e:
             _cancel_ready_event()
-            if e.response:
-                body = e.response.body
-            else:
-                body = ""
-
+            body = e.response.body if e.response else ""
             app_log.error(
                 f"Error starting server{_server_name} for user {username}: {e}\n{body}"
             )
@@ -351,6 +344,6 @@ class Launcher(LoggingConfigurable):
                 500, f"Image {image} for user {username} failed to launch"
             )
 
-        data["url"] = self.hub_url + f"user/{escaped_username}/{server_name}"
+        data["url"] = f"{self.hub_url}user/{escaped_username}/{server_name}"
         self.log.debug(data["url"])
         return data

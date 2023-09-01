@@ -78,7 +78,7 @@ class BinderSpawnerMixin(Configurable):
                 args.append(f"--NotebookApp.default_url={self.default_url}")
 
             if self.cors_allow_origin:
-                args.append("--NotebookApp.allow_origin=" + self.cors_allow_origin)
+                args.append(f"--NotebookApp.allow_origin={self.cors_allow_origin}")
             # allow_origin=* doesn't properly allow cross-origin requests to single files
             # see https://github.com/jupyter/notebook/pull/5898
             if self.cors_allow_origin == "*":

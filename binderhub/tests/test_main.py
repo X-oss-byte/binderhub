@@ -95,7 +95,7 @@ async def test_custom_template(app):
 @pytest.mark.remote
 async def test_about_handler(app):
     # Check that the about page loads
-    r = await async_requests.get(app.url + "/about")
+    r = await async_requests.get(f"{app.url}/about")
     assert r.status_code == 200
     assert "This website is powered by" in r.text
     assert binder_version.split("+")[0] in r.text
@@ -104,7 +104,7 @@ async def test_about_handler(app):
 @pytest.mark.remote
 async def test_versions_handler(app):
     # Check that the about page loads
-    r = await async_requests.get(app.url + "/versions")
+    r = await async_requests.get(f"{app.url}/versions")
     assert r.status_code == 200
 
     data = r.json()

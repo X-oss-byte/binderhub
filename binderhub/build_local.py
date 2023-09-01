@@ -27,8 +27,7 @@ class ProcessTerminated(subprocess.CalledProcessError):
         self.message = message
 
     def __str__(self):
-        s = f"ProcessTerminated: {self.message}"
-        return s
+        return f"ProcessTerminated: {self.message}"
 
 
 # https://github.com/jupyterhub/repo2docker/blob/2021.08.0/repo2docker/utils.py#L13-L58

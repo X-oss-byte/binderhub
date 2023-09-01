@@ -120,10 +120,7 @@ def test_cache_expiry():
 )
 def test_ip_in_networks(ip, cidrs, found):
     networks = {ipaddress.ip_network(cidr): f"message {cidr}" for cidr in cidrs}
-    if networks:
-        min_prefix = min(net.prefixlen for net in networks)
-    else:
-        min_prefix = 1
+    min_prefix = min((net.prefixlen for net in networks), default=1)
     match = utils.ip_in_networks(ip, networks, min_prefix)
     if found:
         assert match

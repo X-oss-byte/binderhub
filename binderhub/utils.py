@@ -93,7 +93,7 @@ class ByteSpecification(Integer):
                 )
             )
         else:
-            return int(float(num) * self.UNIT_SUFFIXES[suffix])
+            return int(num * self.UNIT_SUFFIXES[suffix])
 
 
 class Cache(OrderedDict):
@@ -157,9 +157,9 @@ def url_path_join(*pieces):
     result = "/".join(s for s in stripped if s)
 
     if initial:
-        result = "/" + result
+        result = f"/{result}"
     if final:
-        result = result + "/"
+        result += "/"
     if result == "//":
         result = "/"
 

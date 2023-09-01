@@ -153,9 +153,7 @@ class BuildExecutor(LoggingConfigurable):
             r2d_options.append("--push")
 
         if self.memory_limit:
-            r2d_options.append("--build-memory-limit")
-            r2d_options.append(str(self.memory_limit))
-
+            r2d_options.extend(("--build-memory-limit", str(self.memory_limit)))
         return r2d_options
 
     def get_cmd(self):
@@ -360,34 +358,8 @@ class KubernetesBuildExecutor(BuildExecutor):
         )
         image_builder_pods = json.loads(resp.read())
 
-        if self.sticky_builds and image_builder_pods:
-            node_names = [
-                pod["spec"]["nodeName"] for pod in image_builder_pods["items"]
-            ]
-            ranked_nodes = rendezvous_rank(node_names, self.repo_url)
-            best_node_name = ranked_nodes[0]
-
-            affinity = client.V1Affinity(
-                node_affinity=client.V1NodeAffinity(
-                    preferred_during_scheduling_ignored_during_execution=[
-                        client.V1PreferredSchedulingTerm(
-                            weight=100,
-                            preference=client.V1NodeSelectorTerm(
-                                match_expressions=[
-                                    client.V1NodeSelectorRequirement(
-                                        key="kubernetes.io/hostname",
-                                        operator="In",
-                                        values=[best_node_name],
-                                    )
-                                ]
-                            ),
-                        )
-                    ]
-                )
-            )
-
-        else:
-            affinity = client.V1Affinity(
+        if not self.sticky_builds or not image_builder_pods:
+            return client.V1Affinity(
                 pod_anti_affinity=client.V1PodAntiAffinity(
                     preferred_during_scheduling_ignored_during_execution=[
                         client.V1WeightedPodAffinityTerm(
@@ -395,7 +367,9 @@ class KubernetesBuildExecutor(BuildExecutor):
                             pod_affinity_term=client.V1PodAffinityTerm(
                                 topology_key="kubernetes.io/hostname",
                                 label_selector=client.V1LabelSelector(
-                                    match_labels=dict(component=self._component_label)
+                                    match_labels=dict(
+                                        component=self._component_label
+                                    )
                                 ),
                             ),
                         )
@@ -403,7 +377,30 @@ class KubernetesBuildExecutor(BuildExecutor):
                 )
             )
 
-        return affinity
+        node_names = [
+            pod["spec"]["nodeName"] for pod in image_builder_pods["items"]
+        ]
+        ranked_nodes = rendezvous_rank(node_names, self.repo_url)
+        best_node_name = ranked_nodes[0]
+
+        return client.V1Affinity(
+            node_affinity=client.V1NodeAffinity(
+                preferred_during_scheduling_ignored_during_execution=[
+                    client.V1PreferredSchedulingTerm(
+                        weight=100,
+                        preference=client.V1NodeSelectorTerm(
+                            match_expressions=[
+                                client.V1NodeSelectorRequirement(
+                                    key="kubernetes.io/hostname",
+                                    operator="In",
+                                    values=[best_node_name],
+                                )
+                            ]
+                        ),
+                    )
+                ]
+            )
+        )
 
     def submit(self):
         """
@@ -512,7 +509,6 @@ class KubernetesBuildExecutor(BuildExecutor):
             if e.status == 409:
                 # Someone else created it!
                 app_log.info("Build %s already running", self.name)
-                pass
             else:
                 raise
         else:
@@ -646,10 +642,7 @@ class KubernetesBuildExecutor(BuildExecutor):
                 _request_timeout=KUBE_REQUEST_TIMEOUT,
             )
         except client.rest.ApiException as e:
-            if e.status == 404:
-                # Is ok, someone else has already deleted it
-                pass
-            else:
+            if e.status != 404:
                 raise
 
 
@@ -728,10 +721,7 @@ class KubernetesCleaner(LoggingConfigurable):
                         body=client.V1DeleteOptions(grace_period_seconds=0),
                     )
                 except client.rest.ApiException as e:
-                    if e.status == 404:
-                        # Is ok, someone else has already deleted it
-                        pass
-                    else:
+                    if e.status != 404:
                         raise
 
         if deleted:

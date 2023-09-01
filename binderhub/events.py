@@ -95,9 +95,9 @@ class EventLog(Configurable):
         jsonschema.validate(event, schema)
 
         capsule = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": f"{datetime.utcnow().isoformat()}Z",
             "schema": schema_name,
             "version": version,
         }
-        capsule.update(event)
+        capsule |= event
         self.log.info(capsule)

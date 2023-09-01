@@ -43,7 +43,7 @@ class DockerRegistry(LoggingConfigurable):
         if "://" not in auth_config_url:
             # auth key can be just a hostname,
             # which assumes https
-            auth_config_url = "https://" + auth_config_url
+            auth_config_url = f"https://{auth_config_url}"
 
         if auth_config_url.rstrip("/") == DEFAULT_DOCKER_AUTH_URL:
             # default docker config key is the v1 registry,
@@ -86,7 +86,7 @@ class DockerRegistry(LoggingConfigurable):
         if url.hostname in auths:
             return url.hostname
         # default docker special-case, where auth and registry urls are different
-        if ("." + url.hostname).endswith((".docker.io", ".docker.com")):
+        if f".{url.hostname}".endswith((".docker.io", ".docker.com")):
             return DEFAULT_DOCKER_AUTH_URL
 
         # url not found, leave the most likely default
@@ -127,7 +127,7 @@ class DockerRegistry(LoggingConfigurable):
     @default("token_url")
     def _default_token_url(self):
         url = urlparse(self.url)
-        if ("." + url.hostname).endswith(".gcr.io"):
+        if f".{url.hostname}".endswith(".gcr.io"):
             return "https://{0}/v2/token?service={0}".format(url.hostname)
         elif self.url.endswith(".docker.io"):
             return "https://auth.docker.io/token?service=registry.docker.io"

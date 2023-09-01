@@ -46,7 +46,7 @@ class ParameterizedMainHandler(BaseHandler):
 
     @authenticated
     async def get(self, provider_prefix, _unescaped_spec):
-        prefix = "/v2/" + provider_prefix
+        prefix = f"/v2/{provider_prefix}"
         spec = self.get_spec_from_request(prefix)
         spec = spec.rstrip("/")
         try:
@@ -93,9 +93,7 @@ class ParameterizedMainHandler(BaseHandler):
             rest = urllib.parse.quote(rest)
 
             request = HTTPRequest(
-                proto + "://" + rest,
-                method="HEAD",
-                user_agent="BinderHub",
+                f"{proto}://{rest}", method="HEAD", user_agent="BinderHub"
             )
             response = await client.fetch(request, raise_error=False)
             if response.code >= 400:

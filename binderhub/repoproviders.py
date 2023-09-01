@@ -113,35 +113,29 @@ class RepoProvider(LoggingConfigurable):
         """
         Return true if the given spec has been banned
         """
-        for banned in self.banned_specs:
-            # Ignore case, because most git providers do not
-            # count DS-100/textbook as different from ds-100/textbook
-            if re.match(banned, self.spec, re.IGNORECASE):
-                return True
-        return False
+        return any(
+            re.match(banned, self.spec, re.IGNORECASE)
+            for banned in self.banned_specs
+        )
 
     def has_higher_quota(self):
         """
         Return true if the given spec has a higher quota
         """
-        for higher_quota in self.high_quota_specs:
-            # Ignore case, because most git providers do not
-            # count DS-100/textbook as different from ds-100/textbook
-            if re.match(higher_quota, self.spec, re.IGNORECASE):
-                return True
-        return False
+        return any(
+            re.match(higher_quota, self.spec, re.IGNORECASE)
+            for higher_quota in self.high_quota_specs
+        )
 
     def repo_config(self, settings):
         """
         Return configuration for this repository.
         """
-        repo_config = {}
-
-        # Defaults and simple overrides
-        if self.has_higher_quota():
-            repo_config["quota"] = settings.get("per_repo_quota_higher")
-        else:
-            repo_config["quota"] = settings.get("per_repo_quota")
+        repo_config = {
+            "quota": settings.get("per_repo_quota_higher")
+            if self.has_higher_quota()
+            else settings.get("per_repo_quota")
+        }
 
         # Spec regex-based configuration
         for item in self.spec_config:
@@ -162,7 +156,7 @@ class RepoProvider(LoggingConfigurable):
             # Ignore case, because most git providers do not
             # count DS-100/textbook as different from ds-100/textbook
             if re.match(pattern, self.spec, re.IGNORECASE):
-                repo_config.update(config)
+                repo_config |= config
         return repo_config
 
     async def get_resolved_ref(self):
@@ -242,12 +236,7 @@ class ZenodoProvider(RepoProvider):
     async def get_resolved_spec(self):
         if not hasattr(self, "record_id"):
             self.record_id = await self.get_resolved_ref()
-        # zenodo registers a DOI which represents all versions of a software package
-        # and it always resolves to latest version
-        # for that case, we have to replace the version number in DOIs with
-        # the specific (resolved) version (record_id)
-        resolved_spec = self.spec.split("zenodo")[0] + "zenodo." + self.record_id
-        return resolved_spec
+        return self.spec.split("zenodo")[0] + "zenodo." + self.record_id
 
     def get_repo_url(self):
         # While called repo URL, the return value of this function is passed
@@ -299,11 +288,7 @@ class FigshareProvider(RepoProvider):
         if not hasattr(self, "record_id"):
             self.record_id = await self.get_resolved_ref()
 
-        # spec without version is accepted as version 1 - check get_resolved_ref method
-        # for that case, we have to replace the version number in DOIs with
-        # the specific (resolved) version (record_id)
-        resolved_spec = self.spec.split("figshare")[0] + "figshare." + self.record_id
-        return resolved_spec
+        return self.spec.split("figshare")[0] + "figshare." + self.record_id
 
     def get_repo_url(self):
         # While called repo URL, the return value of this function is passed
@@ -400,11 +385,10 @@ class HydroshareProvider(RepoProvider):
     }
 
     def _parse_resource_id(self, spec):
-        match = self.url_regex.match(spec)
-        if not match:
+        if match := self.url_regex.match(spec):
+            return match.groups()[0]
+        else:
             raise ValueError("The specified Hydroshare resource id was not recognized.")
-        resource_id = match.groups()[0]
-        return resource_id
 
     async def get_resolved_ref(self):
         client = AsyncHTTPClient()
@@ -491,9 +475,7 @@ class GitRepoProvider(RepoProvider):
         self.escaped_url, unresolved_ref = self.spec.split("/", 1)
         self.repo = urllib.parse.unquote(self.escaped_url)
 
-        # handle `git@github.com:path` git ssh url, map to standard url format
-        ssh_match = GIT_SSH_PATTERN.match(self.repo)
-        if ssh_match:
+        if ssh_match := GIT_SSH_PATTERN.match(self.repo):
             user_host, path = ssh_match.groups()
             self.repo = f"ssh://{user_host}/{path}"
 
@@ -616,8 +598,7 @@ class GitLabRepoProvider(RepoProvider):
     def _default_auth(self):
         auth = {}
         for key in ("access_token", "private_token"):
-            value = getattr(self, key)
-            if value:
+            if value := getattr(self, key):
                 auth[key] = value
         return auth
 
@@ -807,8 +788,8 @@ class GitHubRepoProvider(RepoProvider):
 
         request_kwargs = {}
         if self.client_id and self.client_secret:
-            request_kwargs.update(
-                dict(auth_username=self.client_id, auth_password=self.client_secret)
+            request_kwargs |= dict(
+                auth_username=self.client_id, auth_password=self.client_secret
             )
 
         headers = {}
@@ -901,8 +882,7 @@ class GitHubRepoProvider(RepoProvider):
             etag = cached["etag"]
             self.log.debug("Cache hit for %s: %s", api_url, etag)
         else:
-            cache_404 = self.cache_404.get(api_url)
-            if cache_404:
+            if cache_404 := self.cache_404.get(api_url):
                 self.log.debug("Cache hit for 404 on %s", api_url)
                 return None
             etag = None
@@ -985,10 +965,7 @@ class GistRepoProvider(GitHubRepoProvider):
         super(RepoProvider, self).__init__(*args, **kwargs)
         parts = self.spec.split("/")
         self.user, self.gist_id, *_ = parts
-        if len(parts) > 2:
-            self.unresolved_ref = parts[2]
-        else:
-            self.unresolved_ref = ""
+        self.unresolved_ref = parts[2] if len(parts) > 2 else ""
 
     def get_repo_url(self):
         return f"https://{self.hostname}/{self.user}/{self.gist_id}.git"
@@ -1021,12 +998,11 @@ class GistRepoProvider(GitHubRepoProvider):
         all_versions = [e["version"] for e in ref_info["history"]]
         if self.unresolved_ref in {"", "HEAD", "master", "main"}:
             self.resolved_ref = all_versions[0]
-        else:
-            if self.unresolved_ref not in all_versions:
-                return None
-            else:
-                self.resolved_ref = self.unresolved_ref
+        elif self.unresolved_ref in all_versions:
+            self.resolved_ref = self.unresolved_ref
 
+        else:
+            return None
         return self.resolved_ref
 
     async def get_resolved_spec(self):

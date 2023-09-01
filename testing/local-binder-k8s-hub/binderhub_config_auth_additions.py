@@ -21,9 +21,9 @@ c.BinderHub.auth_enabled = True
 url = urlparse(c.BinderHub.hub_url)
 c.HubOAuth.hub_host = f"{url.scheme}://{url.netloc}"
 c.HubOAuth.api_token = c.BinderHub.hub_api_token
-c.HubOAuth.api_url = c.BinderHub.hub_url + "/hub/api/"
+c.HubOAuth.api_url = f"{c.BinderHub.hub_url}/hub/api/"
 c.HubOAuth.base_url = c.BinderHub.base_url
-c.HubOAuth.hub_prefix = c.BinderHub.base_url + "hub/"
+c.HubOAuth.hub_prefix = f"{c.BinderHub.base_url}hub/"
 c.HubOAuth.oauth_redirect_uri = "http://127.0.0.1:8585/oauth_callback"
 c.HubOAuth.oauth_client_id = "service-binder"
 c.HubOAuth.access_scopes = {"access:services!service=binder"}

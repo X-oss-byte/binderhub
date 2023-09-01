@@ -49,10 +49,9 @@ else:
         values = yaml.load(f)
     values_code = values["jupyterhub"]["hub"]["extraConfig"]["0-binderspawnermixin"]
 
-    difflines = list(
+    if difflines := list(
         difflib.context_diff(values_code.splitlines(), py_code.splitlines())
-    )
-    if difflines:
+    ):
         print("\n".join(difflines))
         print("\n")
         print("Values code is not in sync with binderhub/binderspawner_mixin.py")

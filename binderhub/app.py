@@ -166,9 +166,9 @@ class BinderHub(Application):
     @validate("base_url")
     def _valid_base_url(self, proposal):
         if not proposal.value.startswith("/"):
-            proposal.value = "/" + proposal.value
+            proposal.value = f"/{proposal.value}"
         if not proposal.value.endswith("/"):
-            proposal.value = proposal.value + "/"
+            proposal.value = f"{proposal.value}/"
         return proposal.value
 
     badge_base_url = Union(
@@ -194,7 +194,7 @@ class BinderHub(Application):
             return proposal.value
         # add a trailing slash only when a value is set
         if proposal.value and not proposal.value.endswith("/"):
-            proposal.value = proposal.value + "/"
+            proposal.value = f"{proposal.value}/"
         return proposal.value
 
     cors_allow_origin = Unicode(
@@ -537,7 +537,7 @@ class BinderHub(Application):
     def _add_slash(self, proposal):
         """trait validator to ensure hub_url ends with a trailing slash"""
         if proposal.value is not None and not proposal.value.endswith("/"):
-            return proposal.value + "/"
+            return f"{proposal.value}/"
         return proposal.value
 
     build_namespace = Unicode(
@@ -599,10 +599,8 @@ class BinderHub(Application):
             raise TraitError("Please provide at least one repo provider")
 
         if any(
-            [
-                not issubclass(provider, RepoProvider)
-                for provider in proposal.value.values()
-            ]
+            not issubclass(provider, RepoProvider)
+            for provider in proposal.value.values()
         ):
             raise TraitError(
                 "Repository providers should inherit from 'binderhub.RepoProvider'"
@@ -727,11 +725,10 @@ class BinderHub(Application):
     @validate("ban_networks")
     def _cast_ban_networks(self, proposal):
         """Cast CIDR strings to IPv[4|6]Network objects"""
-        networks = {}
-        for cidr, message in proposal.value.items():
-            networks[ipaddress.ip_network(cidr)] = message
-
-        return networks
+        return {
+            ipaddress.ip_network(cidr): message
+            for cidr, message in proposal.value.items()
+        }
 
     ban_networks_min_prefix_len = Integer(
         1,
@@ -740,10 +737,7 @@ class BinderHub(Application):
 
     @observe("ban_networks")
     def _update_prefix_len(self, change):
-        if not change.new:
-            min_len = 1
-        else:
-            min_len = min(net.prefixlen for net in change.new)
+        min_len = 1 if not change.new else min(net.prefixlen for net in change.new)
         self.ban_networks_min_prefix_len = min_len or 1
 
     tornado_settings = Dict(
@@ -860,9 +854,6 @@ class BinderHub(Application):
         # this should not be used for long-running requests
         self.executor = ThreadPoolExecutor(self.executor_threads)
 
-        jinja_options = dict(
-            autoescape=True,
-        )
         template_paths = [self.template_path]
         base_template_path = self._template_path_default()
         if base_template_path not in template_paths:
@@ -878,12 +869,11 @@ class BinderHub(Application):
                 FileSystemLoader(template_paths),
             ]
         )
+        jinja_options = dict(
+            autoescape=True,
+        )
         jinja_env = Environment(loader=loader, **jinja_options)
-        if self.use_registry:
-            registry = self.registry_class(parent=self)
-        else:
-            registry = None
-
+        registry = self.registry_class(parent=self) if self.use_registry else None
         self.launcher = Launcher(
             parent=self,
             hub_url=self.hub_url,
@@ -1010,10 +1000,7 @@ class BinderHub(Application):
             handlers.insert(
                 -1,
                 (
-                    re.escape(
-                        url_path_join(self.base_url, self.extra_static_url_prefix)
-                    )
-                    + r"(.*)",
+                    f"{re.escape(url_path_join(self.base_url, self.extra_static_url_prefix))}(.*)",
                     tornado.web.StaticFileHandler,
                     {"path": self.extra_static_path},
                 ),

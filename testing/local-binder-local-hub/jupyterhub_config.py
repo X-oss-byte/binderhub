@@ -4,6 +4,7 @@ A development config to test BinderHub locally.
 Run `jupyterhub --config=binderhub_config.py` terminal
 Host IP is needed in a few places
 """
+
 import os
 import socket
 
@@ -17,7 +18,6 @@ hostip = s.getsockname()[0]
 s.close()
 
 
-# image & token are set via spawn options
 class LocalContainerSpawner(BinderSpawnerMixin, DockerSpawner):
     pass
 
@@ -36,10 +36,11 @@ c.JupyterHub.hub_connect_ip = hostip
 binderhub_service_name = "binder"
 binderhub_config = os.path.join(os.path.dirname(__file__), "binderhub_config.py")
 
-binderhub_environment = {}
-for env_var in ["JUPYTERHUB_EXTERNAL_URL", "GITHUB_ACCESS_TOKEN"]:
-    if os.getenv(env_var) is not None:
-        binderhub_environment[env_var] = os.getenv(env_var)
+binderhub_environment = {
+    env_var: os.getenv(env_var)
+    for env_var in ["JUPYTERHUB_EXTERNAL_URL", "GITHUB_ACCESS_TOKEN"]
+    if os.getenv(env_var) is not None
+}
 c.JupyterHub.services = [
     {
         "name": binderhub_service_name,

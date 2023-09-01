@@ -150,10 +150,7 @@ class BuildHandler(BaseHandler):
 
     async def emit(self, data):
         """Emit an eventstream event"""
-        if type(data) is not str:
-            serialized_data = json.dumps(data)
-        else:
-            serialized_data = data
+        serialized_data = json.dumps(data) if type(data) is not str else data
         try:
             self.write(f"data: {serialized_data}\n\n")
             await self.flush()
@@ -189,10 +186,10 @@ class BuildHandler(BaseHandler):
 
     def send_error(self, status_code, **kwargs):
         """event stream cannot set an error code, so send an error event"""
-        exc_info = kwargs.get("exc_info")
-        message = ""
-        if exc_info:
+        if exc_info := kwargs.get("exc_info"):
             message = self.extract_message(exc_info)
+        else:
+            message = ""
         if not message:
             message = responses.get(status_code, "Unknown HTTP Error")
 
@@ -244,7 +241,7 @@ class BuildHandler(BaseHandler):
                 repo, ref, etc.)
 
         """
-        prefix = "/build/" + provider_prefix
+        prefix = f"/build/{provider_prefix}"
         spec = self.get_spec_from_request(prefix)
 
         # verify the build token and rate limit
@@ -679,10 +676,7 @@ class BuildHandler(BaseHandler):
                 )
             except Exception as e:
                 duration = time.perf_counter() - launch_starttime
-                if i + 1 == launcher.retries:
-                    status = "failure"
-                else:
-                    status = "retry"
+                status = "failure" if i + 1 == launcher.retries else "retry"
                 # don't count retries in failure/retry
                 # retry count is only interesting in success
                 LAUNCH_TIME.labels(

@@ -35,12 +35,11 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
         if self.skip_check_request_ip or not ban_networks:
             return
         request_ip = self.request.remote_ip
-        match = ip_in_networks(
+        if match := ip_in_networks(
             request_ip,
             ban_networks,
             min_prefix_len=self.settings["ban_networks_min_prefix_len"],
-        )
-        if match:
+        ):
             network, message = match
             app_log.warning(
                 f"Blocking request from {request_ip} matching banned network {network}: {message}"
@@ -155,8 +154,7 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
         This is needed because tornado converts 'foo%2Fbar/ref' to 'foo/bar/ref'.
         """
         idx = self.request.path.index(prefix)
-        spec = self.request.path[idx + len(prefix) + 1 :]
-        return spec
+        return self.request.path[idx + len(prefix) + 1 :]
 
     def get_provider(self, provider_prefix, spec):
         """Construct a provider object"""
@@ -177,7 +175,7 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
     def render_template(self, name, **extra_ns):
         """Render an HTML page"""
         ns = {}
-        ns.update(self.template_namespace)
+        ns |= self.template_namespace
         ns.update(extra_ns)
         template = self.settings["jinja2_env"].get_template(name)
         html = template.render(**ns)
@@ -194,11 +192,8 @@ class BaseHandler(HubOAuthenticated, web.RequestHandler):
 
     def write_error(self, status_code, **kwargs):
         exc_info = kwargs.get("exc_info")
-        message = ""
         status_message = responses.get(status_code, "Unknown HTTP Error")
-        if exc_info:
-            message = self.extract_message(exc_info)
-
+        message = self.extract_message(exc_info) if exc_info else ""
         self.render_template(
             "error.html",
             status_code=status_code,

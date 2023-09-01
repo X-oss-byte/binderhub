@@ -531,7 +531,7 @@ def test_gist_ref(owner, gist_id, unresolved_ref, resolved_ref):
 
 @pytest.mark.github_api
 def test_gist_secret():
-    spec = "{}/{}".format("mariusvniekerk", "bd01411ea4bf4eb8135893ef237398ba")
+    spec = 'mariusvniekerk/bd01411ea4bf4eb8135893ef237398ba'
 
     provider = GistRepoProvider(spec=spec)
     with pytest.raises(ValueError):

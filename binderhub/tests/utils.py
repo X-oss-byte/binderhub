@@ -66,11 +66,7 @@ class MockAsyncHTTPClient(CurlAsyncHTTPClient):
 
         url_key = self.url_key(request.url)
 
-        if url_key in self.mocks:
-            fetch = self.fetch_mock
-        else:
-            fetch = super().fetch
-
+        fetch = self.fetch_mock if url_key in self.mocks else super().fetch
         error = None
         try:
             response = await gen.maybe_future(

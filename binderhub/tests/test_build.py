@@ -360,14 +360,14 @@ async def test_local_repo2docker_build_stop(io_loop):
     assert event.kind == ProgressEvent.Kind.BUILD_STATUS_CHANGE
     assert event.payload == ProgressEvent.BuildStatus.RUNNING
 
-    for i in range(2):
+    for _ in range(2):
         event = await q.get()
         assert event.kind == ProgressEvent.Kind.LOG_MESSAGE
         assert "message" in event.payload
 
     build.stop()
 
-    for i in range(10):
+    for _ in range(10):
         event = await q.get()
         if (
             event.kind == ProgressEvent.Kind.BUILD_STATUS_CHANGE

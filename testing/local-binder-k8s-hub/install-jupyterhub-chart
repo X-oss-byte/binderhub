@@ -42,16 +42,19 @@ with NamedTemporaryFile(mode="w") as tmp:
     yaml.dump(jupyterhub_chart_config, tmp.file)
     tmp.flush()
 
-    cmd = ["helm", "upgrade", "--install", "binderhub-test"]
-    cmd.extend(
-        [
+    cmd = [
+        "helm",
+        "upgrade",
+        "--install",
+        "binderhub-test",
+        *[
             "jupyterhub",
             "--repo=https://jupyterhub.github.io/helm-chart/",
             f"--version={_get_jupyterhub_dependency_version()}",
             f"--values={tmp.name}",
             f'--values={os.path.join(here, "jupyterhub-chart-config.yaml")}',
-        ]
-    )
+        ],
+    ]
     if "--auth" in sys.argv:
         cmd.extend(
             [

@@ -61,7 +61,7 @@ def pytest_configure(config):
 
 
 def pytest_runtest_setup(item):
-    is_helm_test = any(mark for mark in item.iter_markers(name="helm"))
+    is_helm_test = any(item.iter_markers(name="helm"))
     if not item.config.getoption("--helm"):
         if is_helm_test:
             pytest.skip("Skipping test marked as 'helm'")
